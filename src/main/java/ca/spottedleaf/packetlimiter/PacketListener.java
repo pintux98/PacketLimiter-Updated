@@ -1,11 +1,9 @@
 package ca.spottedleaf.packetlimiter;
 
 import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.events.ListenerOptions;
 import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.injector.server.TemporaryPlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -31,17 +29,19 @@ public final class PacketListener extends PacketAdapter implements Listener {
     private final double interval;
 
     public PacketListener(final PacketLimiter plugin, final String kickMessage, final double maxPacketRate, final double interval) {
-        super(plugin, ListenerPriority.LOWEST, getPackets(), ListenerOptions.ASYNC, ListenerOptions.INTERCEPT_INPUT_BUFFER);
-        // we want to listen at the earliest stage so we can reduce the overhead of packets going through other plugins,
-        // as well as other plugin logic being executed for cancelled packets
+        super(plugin, ListenerPriority.LOWEST, getPackets());
+        // listen at the earliest stage to reduce overhead before other plugins process packets
 
         this.kickMessage = kickMessage;
         this.maxPacketRate = maxPacketRate;
         this.interval = interval;
 
-        // ... support reload
+        // support reload
         for (final Player player : Bukkit.getOnlinePlayers()) {
-            this.playerPacketInfo.put(player.getUniqueId(), new PlayerInfo(new PacketBucket(this.interval, 150), player.getUniqueId()));
+            this.playerPacketInfo.put(
+                    player.getUniqueId(),
+                    new PlayerInfo(new PacketBucket(this.interval, 150), player.getUniqueId())
+            );
         }
     }
 
@@ -64,9 +64,8 @@ public final class PacketListener extends PacketAdapter implements Listener {
         }
 
         final Player player = event.getPlayer();
-
-        if (player instanceof TemporaryPlayer || player == null) {
-            return; // we don't have UUID at this stage
+        if (player == null || !player.isOnline()) {
+            return; // player not available
         }
 
         final UUID targetUniqueId = player.getUniqueId();
@@ -103,18 +102,18 @@ public final class PacketListener extends PacketAdapter implements Listener {
                     }
 
                     target.kickPlayer(this.kickMessage);
-                    this.plugin.getLogger().log(Level.WARNING, "Player {0} ({1}) was kicked for sending too many packets! {2} in the last {3} seconds",
-                            new Object[] {target.getName(), target.getUniqueId(), packets, ONE_DECIMAL_PLACE.format(bucket.intervalTime / 1000.0)});
+                    this.plugin.getLogger().log(Level.WARNING,
+                            "Player {0} ({1}) was kicked for sending too many packets! {2} in the last {3} seconds",
+                            new Object[]{target.getName(), target.getUniqueId(), packets,
+                                    ONE_DECIMAL_PLACE.format(bucket.intervalTime / 1000.0)});
                 });
             }
         }
     }
 
-
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerJoin(final PlayerJoinEvent event) {
         final UUID player = event.getPlayer().getUniqueId();
-
         this.playerPacketInfo.put(player, new PlayerInfo(new PacketBucket(this.interval, 150), player));
     }
 

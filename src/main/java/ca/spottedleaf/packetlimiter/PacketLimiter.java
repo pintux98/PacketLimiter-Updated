@@ -38,7 +38,7 @@ public final class PacketLimiter extends JavaPlugin implements Listener {
         final Logger logger = this.getLogger();
 
         logger.info("Packet sampling interval: " + this.config.interval + "s");
-        logger.info("Max packet rate: " + this.config.maxPacketRate + "packets/s");
+        logger.info("Max packet rate: " + this.config.maxPacketRate + " packets/s");
     }
 
     @Override
@@ -49,8 +49,12 @@ public final class PacketLimiter extends JavaPlugin implements Listener {
             });
             return;
         }
-
-        this.packetListener = new PacketListener(this, this.config.kickMessage, this.config.maxPacketRate, this.config.interval * 1000.0);
+        this.packetListener = new PacketListener(
+                this,
+                this.config.kickMessage,
+                this.config.maxPacketRate,
+                this.config.interval * 1000.0
+        );
 
         ProtocolLibrary.getProtocolManager().addPacketListener(this.packetListener);
         Bukkit.getPluginManager().registerEvents(this.packetListener, this);
@@ -59,7 +63,7 @@ public final class PacketLimiter extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         if (this.packetListener != null) {
-            ProtocolLibrary.getProtocolManager().removePacketListeners(this);
+            ProtocolLibrary.getProtocolManager().removePacketListener(this.packetListener);
         }
     }
 }
